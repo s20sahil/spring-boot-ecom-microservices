@@ -1,0 +1,16 @@
+version: "3.8"
+    
+services:
+  
+  mongo-products: 
+    image: mongo:4.0.28-xenial #Smaller size image ~150 MB
+    expose:
+      - "27017"
+    ports:
+      - 27017:27017
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: iamroot
+    volumes: 
+      - ./.mongo-products:/data.db #Mapping mongo's default DB data storage path to dir outside of container
