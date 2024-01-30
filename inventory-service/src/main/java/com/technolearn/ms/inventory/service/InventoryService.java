@@ -33,7 +33,7 @@ public class InventoryService {
 
     public List<InventoryResponse> isInStock(List<String> skuCode) {
         return inventoryRepository.findByProductSkuCodeIn(skuCode).stream()
-                .map(sku -> new InventoryResponse(sku.getProductSkuCode(), sku.getProductName(), sku.getQuantity()>0))
+                .map(sku -> new InventoryResponse(sku.getProductSkuCode(), sku.getProductName(), sku.getQuantity(), sku.getQuantity()>0))
                 .toList();
     }
 
