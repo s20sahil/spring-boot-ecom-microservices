@@ -31,8 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-
-
-### Docker mounted folders ###
-.mongo-products/
-.postgres-inventory/
