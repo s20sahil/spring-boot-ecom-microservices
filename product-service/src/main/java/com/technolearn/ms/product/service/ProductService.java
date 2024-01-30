@@ -10,7 +10,6 @@ import com.technolearn.ms.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
