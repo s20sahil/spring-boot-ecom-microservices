@@ -36,3 +36,4 @@ build/
 ### Docker mounted folders ###
 .mongo-products/
 .postgres-inventory/
+.postgres-orders/
