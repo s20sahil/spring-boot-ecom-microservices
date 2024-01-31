@@ -24,7 +24,7 @@ Apart from these modern features it touches upon various other commonly implemen
 
 The diagram below self-explanatory and represents the high level components which are created by this project
 
-<TODO>
+![High level component diagram](blueprint.png)
 
 ## Quickstart
 
