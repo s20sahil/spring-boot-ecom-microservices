@@ -1,0 +1,98 @@
+version: "3.8"
+    
+services:
+  
+#Data store containers
+  mongo-products: 
+    image: mongo:4.0.28-xenial #Smaller size image ~150 MB
+    expose:
+      - "27017"
+    ports:
+      - 27017:27017
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: iamroot
+    volumes: 
+      - ./.mongo-products:/data.db #Mapping mongo's default DB data storage path to dir outside of container
+
+  postgres-inventory: 
+    image: postgres:latest
+    expose:
+      - "5432"
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inventory-service
+      POSTGRES_USER: technolearninventory
+      POSTGRES_PASSWORD: technolearnpwd
+      PGDATA: /data/postgres
+    volumes: 
+      - ./.postgres-inventory:/data/postgres #Mapping postgres's DB data storage path to dir outside of container
+
+  postgres-orders: 
+    image: postgres:latest
+    expose:
+      - "5431"
+    ports:
+      - 5431:5431
+    command: -p 5431  #5431 is not a default postgres port thus we have to provide it as a start cli argumnent with -p flag
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: order-service
+      POSTGRES_USER: technolearnorders
+      POSTGRES_PASSWORD: technolearnpwd
+      PGDATA: /data/postgres
+    volumes: 
+      - ./.postgres-orders:/data/postgres #Mapping postgres's DB data storage path to dir outside of container
+
+#Oberservability containers
+  tempo:
+    image: grafana/tempo
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+        - ./distributed-tracing/docker/tempo/tempo-local.yaml:/etc/tempo.yaml:ro
+        - ./distributed-tracing/tempo-data:/tmp/tempo
+    ports:
+        - "14268"  # jaeger ingest
+        - "9411:9411" # zipkin
+
+  loki:
+    image: grafana/loki
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    ports:
+        - "3100:3100"                                   # loki needs to be exposed so it receives logs
+    environment:
+        - JAEGER_AGENT_HOST=tempo
+        - JAEGER_ENDPOINT=http://tempo:14268/api/traces # send traces to Tempo
+        - JAEGER_SAMPLER_TYPE=const
+        - JAEGER_SAMPLER_PARAM=1
+
+  prometheus:
+    image: prom/prometheus
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command:
+        - --enable-feature=exemplar-storage
+        - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+        - ./distributed-tracing/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+        - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    extra_hosts: ['host.docker.internal:host-gateway']
+    volumes:
+        - ./distributed-tracing/docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+        - ./distributed-tracing/docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+        - GF_AUTH_ANONYMOUS_ENABLED=true
+        - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+        - "3000:3000"
+# Prometheus: http://localhost:9090/
+# Grafana: http://localhost:3000/
