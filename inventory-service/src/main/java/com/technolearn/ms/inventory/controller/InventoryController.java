@@ -18,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryController {
 
     private final InventoryService inventoryService;
@@ -37,7 +40,9 @@ public class InventoryController {
     
     @PatchMapping("skus/{id}")
     public ResponseEntity<Void> updateSkuInventory(@PathVariable String id, @RequestBody InventoryRequest ir) {
+        log.info("Updating inventory for sku: {} with quantity: {}", id, ir.quantity());
         Boolean updateFlag = inventoryService.updateSkuInventory(id, ir.quantity());
+        log.info("Update status for sku: {} is {}", id, updateFlag);
         return updateFlag?ResponseEntity.ok().build():ResponseEntity.notFound().build();
     }
 

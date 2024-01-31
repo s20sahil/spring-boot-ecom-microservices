@@ -11,10 +11,12 @@ import com.technolearn.ms.inventory.model.Inventory;
 import com.technolearn.ms.inventory.repository.InventoryRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
@@ -32,6 +34,7 @@ public class InventoryService {
     }
 
     public List<InventoryResponse> isInStock(List<String> skuCode) {
+        log.info("Checking for SKU inventory for {}",skuCode);
         return inventoryRepository.findByProductSkuCodeIn(skuCode).stream()
                 .map(sku -> new InventoryResponse(sku.getProductSkuCode(), sku.getProductName(), sku.getQuantity(), sku.getQuantity()>0))
                 .toList();

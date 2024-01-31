@@ -19,6 +19,7 @@ import com.technolearn.ms.order.model.Order;
 import com.technolearn.ms.order.model.OrderLineItem;
 import com.technolearn.ms.order.repository.OrderRepository;
 
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -36,6 +37,16 @@ public class OrderService {
     @Value(value = "${inventory.service.endpoint}")
     private String inventoryServiceEndpoint;
 
+    /**
+     * A method which will have inter service connectivity with inventory 
+     * service to check qty and place an order
+     * @param orderRequest
+     * @return
+     */
+    @Observed(
+        name = "order-service-placeOrder",
+        contextualName = "placeOrder"
+    )
     public String placeOrder(OrderRequest orderRequest) {
 
         Order order = new Order();
@@ -88,13 +99,14 @@ public class OrderService {
                         updateInventoryForProductSku(ir).subscribe(
                             result -> {
                                 // Handle successful result
-                                System.out.println("Inventory updated successfully");
+                                log.info("Inventory updated successfully{}",matchingObj.productSkuCode());
                             },
                             error -> {
                                 // Handle error
-                                System.err.println("Error updating inventory: " + error.getMessage());
+                                    log.error("Error updating inventory: {}",error.getMessage());
                             }
-                        );;
+                    );
+                        log.info("Inventory update operation completed for sku {}",matchingObj.productSkuCode());
                     });
             
             return order.getOrderNumber();
@@ -114,6 +126,7 @@ public class OrderService {
      * @return
      */
     private InventoryResponse[] getInventoryIsInStockResponse(List<String> productSkuCodes) {
+        log.info("Calling inventory service to check if inventory is available for {}",productSkuCodes);
         return webClientBuilder.build().get()
                 .uri(inventoryServiceEndpoint,
                         uriBuilder -> uriBuilder.queryParam("skuCode", productSkuCodes).build())
@@ -123,7 +136,7 @@ public class OrderService {
     }
     
     private Mono<Void> updateInventoryForProductSku(InventoryRequest updateInventoryRequest) {
-
+        
         return webClientBuilder.build().patch()
                 .uri(inventoryServiceEndpoint,uriBuilder -> uriBuilder.path("/skus/{skuCode}").build(updateInventoryRequest.productSkuCode()))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -132,7 +145,7 @@ public class OrderService {
                     if (!response.statusCode().is2xxSuccessful()) {
                         return Mono.error(new Exception("Inventory update failed for "+updateInventoryRequest.productSkuCode()));
                     }
-                    return Mono.empty(); // Return empty Mono if the update is successful
+                    return Mono.empty(); // Return empty Mono to which the calling service could subscribe
                 });
     }
     
@@ -150,5 +163,4 @@ public class OrderService {
         .build();
     }
 
-    
 }
