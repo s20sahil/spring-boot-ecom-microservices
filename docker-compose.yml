@@ -2,6 +2,7 @@ version: "3.8"
     
 services:
   
+#Data store containers
   mongo-products: 
     image: mongo:4.0.28-xenial #Smaller size image ~150 MB
     expose:
@@ -45,3 +46,123 @@ services:
       PGDATA: /data/postgres
     volumes: 
       - ./.postgres-orders:/data/postgres #Mapping postgres's DB data storage path to dir outside of container
+
+#Spring boot service conatiners 
+
+## Eureka Server
+  discovery-server:
+    image: technolearn/discovery-server:latest
+    container_name: discovery-server
+    pull_policy: always
+    expose:
+      - "8761"
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+      - grafana
+
+  api-gateway:
+    image: technolearn/api-gateway:latest
+    container_name: api-gateway
+    pull_policy: always
+    expose:
+      - "8181"
+    ports:
+      - "8181:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+
+  ## Product-Service Docker Compose Config
+  product-service:
+    container_name: product-service
+    image: technolearn/product-service:latest
+    pull_policy: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - mongo-products
+      - discovery-server
+      - api-gateway
+
+  ## Order-Service Docker Compose Config
+  order-service:
+    container_name: order-service
+    image: technolearn/order-service:latest
+    pull_policy: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-orders:5431/order-service
+    depends_on:
+      - postgres-orders
+      - discovery-server
+      - api-gateway
+
+  ## Inventory-Service Docker Compose Config
+  inventory-service:
+    container_name: inventory-service
+    image: technolearn/inventory-service:latest
+    pull_policy: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-inventory:5432/inventory-service
+    depends_on:
+      - postgres-inventory
+      - discovery-server
+      - api-gateway
+
+#Oberservability containers
+  tempo:
+    image: grafana/tempo
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+        - ./distributed-tracing/docker/tempo/tempo-local.yaml:/etc/tempo.yaml:ro
+        - ./distributed-tracing/tempo-data:/tmp/tempo
+    ports:
+        - "14268"  # jaeger ingest
+        - "9411:9411" # zipkin
+
+  loki:
+    image: grafana/loki
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    ports:
+        - "3100:3100"                                   # loki needs to be exposed so it receives logs
+    environment:
+        - JAEGER_AGENT_HOST=tempo
+        - JAEGER_ENDPOINT=http://tempo:14268/api/traces # send traces to Tempo
+        - JAEGER_SAMPLER_TYPE=const
+        - JAEGER_SAMPLER_PARAM=1
+
+  prometheus:
+    image: prom/prometheus
+    extra_hosts: ['host.docker.internal:host-gateway']
+    command:
+        - --enable-feature=exemplar-storage
+        - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+        - ./distributed-tracing/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+        - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    extra_hosts: ['host.docker.internal:host-gateway']
+    volumes:
+        - ./distributed-tracing/docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+        - ./distributed-tracing/docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+        - GF_AUTH_ANONYMOUS_ENABLED=true
+        - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+        - "3000:3000"
+# Prometheus: http://localhost:9090/
+# Grafana: http://localhost:3000/
