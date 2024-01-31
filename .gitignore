@@ -37,3 +37,4 @@ build/
 .mongo-products/
 .postgres-inventory/
 .postgres-orders/
+distributed-tracing/tempo-data/**
