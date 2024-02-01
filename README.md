@@ -30,6 +30,13 @@ The diagram below self-explanatory and represents the high level components whic
 
 The simplest way to run the project is to run the `docker-compose.yml` file in the root directory. This docker compose file consists all the individual servers needed to run the entire application components , which includes the following list of server components
 
+IMPORTANT : If tyou are running project in local and try to update the docker images in the repo then please take the following steps :
+1. Make sure that root pom.xml has correct user listed in the docker hub registry url e.g. 
+2. Go to the root directory and execute the following command to compile, build and upload new images to the docker registry publicly.
+```bash
+./mvnw clean compile jib:build -d 
+```
+
 **#Data stores**
 mongo-products => image: mongo:4.0.28-xenial
 postgres-inventory => image: postgres:latest
