@@ -117,7 +117,6 @@ class InventoryServiceApplicationTests {
                         Integer newQty = new Random().nextInt(100);
                         InventoryRequest updatePayload = new InventoryRequest(null, null, newQty);
 
-                        System.out.println("+++++++++++++++"+objectMapper.writeValueAsString(updatePayload));
                         mockMvc.perform(MockMvcRequestBuilders
                                 .patch("/api/inventory/skus/{id}",
                                         URLEncoder.encode(inventoryRequest.productSkuCode(),
