@@ -1,0 +1,16 @@
+<configuration>
+
+    <!-- Set the root level to ERROR for minimal logging -->
+    <root level="ERROR">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!-- Define the STDOUT appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- Encoder pattern for console output -->
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+</configuration>
